@@ -16,6 +16,13 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
+    # S3 / MinIO (archival)
+    S3_ENDPOINT_URL: str = "http://localhost:9000"  # set to "" for real AWS
+    S3_ACCESS_KEY: str = "minioadmin"
+    S3_SECRET_KEY: str = "minioadmin"
+    S3_BUCKET_NAME: str = "tenantforge-archival"
+    S3_REGION: str = "us-east-1"
+
     # App
     ENVIRONMENT: str = "development"
     PROJECT_NAME: str = "TenantForge"

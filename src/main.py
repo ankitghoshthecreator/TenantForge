@@ -12,6 +12,7 @@ from src.auth.router import router as auth_router
 from src.core.config import settings
 from src.db.session import AsyncSessionLocal, engine
 from src.middleware.tenant_context import TenantContextMiddleware
+from src.provisioning.router import router as provisioning_router
 
 
 # ---------------------------------------------------------------------------
@@ -41,6 +42,7 @@ app.add_middleware(TenantContextMiddleware)
 
 # Routers
 app.include_router(auth_router)
+app.include_router(provisioning_router)
 
 
 # ---------------------------------------------------------------------------

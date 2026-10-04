@@ -31,6 +31,39 @@ services:
       timeout: 5s
       retries: 5
 
+  minio:
+    image: minio/minio:latest
+    container_name: tenantforge_minio
+    restart: unless-stopped
+    ports:
+      - "9000:9000"   # S3 API
+      - "9001:9001"   # Web console (http://localhost:9001)
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Create the archival bucket on first start
+  minio_init:
+    image: minio/mc:latest
+    container_name: tenantforge_minio_init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 minioadmin minioadmin &&
+      mc mb --ignore-existing local/tenantforge-archival &&
+      echo 'Bucket ready'
+      "
+
   app:
     build:
       context: .
@@ -47,14 +80,50 @@ services:
       ACCESS_TOKEN_EXPIRE_MINUTES: 30
       REFRESH_TOKEN_EXPIRE_DAYS: 7
       ENVIRONMENT: development
+      # S3 / MinIO
+      S3_ENDPOINT_URL: http://minio:9000
+      S3_ACCESS_KEY: minioadmin
+      S3_SECRET_KEY: minioadmin
+      S3_BUCKET_NAME: tenantforge-archival
+      S3_REGION: us-east-1
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_healthy
+      minio_init:
+        condition: service_completed_successfully
     volumes:
       - .:/app
     command: uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
 
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: tenantforge_worker
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql+asyncpg://tenantforge:tenantforge_secret@db:5432/tenantforge
+      REDIS_URL: redis://redis:6379/0
+      JWT_SECRET_KEY: change-me-in-production-use-at-least-32-chars
+      ENVIRONMENT: development
+      S3_ENDPOINT_URL: http://minio:9000
+      S3_ACCESS_KEY: minioadmin
+      S3_SECRET_KEY: minioadmin
+      S3_BUCKET_NAME: tenantforge-archival
+      S3_REGION: us-east-1
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio_init:
+        condition: service_completed_successfully
+    volumes:
+      - .:/app
+    command: arq src.workers.archival.WorkerSettings
+
 volumes:
   postgres_data:
+  minio_data:

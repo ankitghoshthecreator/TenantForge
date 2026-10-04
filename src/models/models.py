@@ -34,6 +34,7 @@ class Tenant(Base):
     slug = Column(String(100), unique=True, nullable=False, index=True)
     is_deleted = Column(Boolean, default=False, nullable=False)
     deleted_at = Column(DateTime(timezone=True), nullable=True)
+    grace_period_days = Column(sa.Integer, nullable=False, default=30)
     created_at = Column(DateTime(timezone=True), default=utcnow, nullable=False)
 
     users = relationship("User", back_populates="tenant", lazy="raise")

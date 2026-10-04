@@ -20,7 +20,16 @@ from starlette.responses import JSONResponse
 from src.core.security import decode_token
 
 
-SKIP_PATHS = {"/auth/login", "/auth/register", "/health", "/ready", "/docs", "/openapi.json", "/redoc"}
+SKIP_PATHS = {
+    "/auth/login",
+    "/auth/register",
+    "/health",
+    "/ready",
+    "/docs",
+    "/openapi.json",
+    "/redoc",
+}
+# NOTE: /admin/* is NOT in SKIP_PATHS — it always requires a valid JWT.
 
 
 class TenantContextMiddleware(BaseHTTPMiddleware):
